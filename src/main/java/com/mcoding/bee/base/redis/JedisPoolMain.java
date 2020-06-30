@@ -1,8 +1,9 @@
-package com.mcoding.bee.redis;
+package com.mcoding.bee.base.redis;
 
 import org.apache.commons.pool2.impl.GenericObjectPoolConfig;
 import redis.clients.jedis.Jedis;
 import redis.clients.jedis.JedisPool;
+import redis.clients.jedis.JedisPubSub;
 
 import java.util.concurrent.TimeUnit;
 
@@ -25,6 +26,14 @@ public class JedisPoolMain {
 
         try {
             jedis = jedisPool.getResource();
+            jedis.subscribe(new JedisPubSub() {
+                @Override
+                public void onMessage(String channel, String message) {
+                    super.onMessage(channel, message);
+                }
+            }, "+switch-master");
+
+            System.out.println("hello youosfsjfljsdf");
             jedis.get("hello");
 
             TimeUnit.SECONDS.sleep(10);

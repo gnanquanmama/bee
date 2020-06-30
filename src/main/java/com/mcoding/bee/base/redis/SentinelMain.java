@@ -1,6 +1,5 @@
-package com.mcoding.bee.redis;
+package com.mcoding.bee.base.redis;
 
-import org.apache.commons.pool2.impl.GenericObjectPoolConfig;
 import redis.clients.jedis.HostAndPort;
 import redis.clients.jedis.Jedis;
 import redis.clients.jedis.JedisPoolConfig;

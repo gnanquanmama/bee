@@ -1,4 +1,4 @@
-package com.mcoding.bee.redis;
+package com.mcoding.bee.base.redis;
 
 import redis.clients.jedis.Jedis;
 

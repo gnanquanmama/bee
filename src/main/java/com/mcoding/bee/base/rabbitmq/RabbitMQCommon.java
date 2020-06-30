@@ -1,4 +1,4 @@
-package com.mcoding.bee.rabbitmq;
+package com.mcoding.bee.base.rabbitmq;
 
 /**
  * @author wzt on 2020/5/19.

@@ -1,4 +1,4 @@
-package com.mcoding.bee.rabbitmq;
+package com.mcoding.bee.base.rabbitmq;
 
 import com.rabbitmq.client.Channel;
 import com.rabbitmq.client.Connection;

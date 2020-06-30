@@ -1,6 +1,8 @@
-package com.mcoding.bee.rabbitmq;
+package com.mcoding.bee.base.rabbitmq;
 
-import com.rabbitmq.client.*;
+import com.rabbitmq.client.Channel;
+import com.rabbitmq.client.Connection;
+import com.rabbitmq.client.ConnectionFactory;
 import lombok.extern.slf4j.Slf4j;
 
 import java.io.IOException;
@@ -11,7 +13,7 @@ import java.util.concurrent.TimeoutException;
  * @version 1.0
  */
 @Slf4j
-public class ConfirmProcuder {
+public class TxProcuder {
 
     public static void main(String[] args) throws IOException, TimeoutException {
         ConnectionFactory connectionFactory = new ConnectionFactory();
@@ -23,32 +25,28 @@ public class ConfirmProcuder {
         connectionFactory.setVirtualHost(RabbitMQCommon.RABBITMQ_DEFAULT_VIRTUAL_HOST);
 
         Connection connection = connectionFactory.newConnection();
+        connection.isOpen();
         Channel channel = connection.createChannel();
-
-        channel.confirmSelect();
 
         long currentTime = System.currentTimeMillis();
         String msg = "Hello RabbitMQ Consumer Message";
-        for (int i = 0; i < 1000_0000; i++) {
-            log.info("生产端发送：{}", msg + i);
+        for (int i = 0; i < 100; i++) {
 
-            AMQP.BasicProperties basicProperties = new AMQP.BasicProperties().builder().deliveryMode(2).build();
-            channel.basicPublish(Consumer.EXCHANGE_NAME, Consumer.ROUTING_KEY, true, basicProperties, (msg + i).getBytes());
+            channel.txSelect();
+            try {
+                log.info("生产端发送：{}", msg + i);
+                channel.basicPublish(Consumer.EXCHANGE_NAME, Consumer.ROUTING_KEY, true, null, (msg + i).getBytes());
+
+            } catch (Exception e) {
+                e.printStackTrace();
+                channel.txRollback();
+            } finally {
+                channel.txCommit();
+            }
+
         }
 
         log.info("cost time {}", System.currentTimeMillis() - currentTime);
-
-        channel.addConfirmListener(new ConfirmListener() {
-            @Override
-            public void handleNack(long deliveryTag, boolean multiple) throws IOException {
-                log.info("未确认消息，标识：" + deliveryTag);
-            }
-
-            @Override
-            public void handleAck(long deliveryTag, boolean multiple) throws IOException {
-                log.info(String.format("已确认消息，标识：%d，多个消息：%b", deliveryTag, multiple));
-            }
-        });
 
     }
 
