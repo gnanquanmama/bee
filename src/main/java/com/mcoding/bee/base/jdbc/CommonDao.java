@@ -1,4 +1,4 @@
-package com.mcoding.bee.biz.user;
+package com.mcoding.bee.base.jdbc;
 
 import com.google.common.collect.Lists;
 import com.mcoding.bee.base.jdbc.JdbcUtils;
@@ -6,15 +6,19 @@ import org.apache.ibatis.type.SimpleTypeRegistry;
 
 import java.io.InputStream;
 import java.lang.reflect.Field;
-import java.sql.*;
+import java.sql.Connection;
+import java.sql.PreparedStatement;
+import java.sql.ResultSet;
+import java.sql.ResultSetMetaData;
 import java.util.List;
+import java.util.Map;
 import java.util.Properties;
 
 /**
  * @author wzt on 2020/6/30.
  * @version 1.0
  */
-public class UserDao {
+public class CommonDao {
 
     private static Properties prop = new Properties();
 
@@ -27,29 +31,41 @@ public class UserDao {
         }
     }
 
-    public List<Object> selectList(String sqlId, String name) {
+    public <T> List<T> selectList(String sqlId, Object param) {
         String preSql = prop.getProperty(sqlId);
         String resultTypeClassName = prop.getProperty(sqlId + ".resultclassname");
 
+        Connection connection = null;
+        PreparedStatement statement = null;
         ResultSet resultSet = null;
 
-        try (Connection connection = JdbcUtils.getConnection();
-             PreparedStatement statement = connection.prepareStatement(preSql)) {
+        try {
+            connection = JdbcUtils.getConnection();
+            statement = connection.prepareStatement(preSql);
 
-            if (SimpleTypeRegistry.isSimpleType(name.getClass())) {
-                statement.setObject(1, name);
+            if (SimpleTypeRegistry.isSimpleType(param.getClass())) {
+                statement.setObject(1, param);
+            } else if (param instanceof Map) {
+                Map<String, Object> paramMap = (Map<String, Object>) param;
+
+                String columnNames = prop.getProperty(sqlId + ".columnnames");
+                String[] columnNameArray = columnNames.split(",");
+
+                for (int i = 1; i <= columnNameArray.length; i++) {
+                    statement.setObject(i, paramMap.get(columnNameArray[i - 1]));
+                }
             }
 
-            List<Object> resultList = Lists.newArrayList();
-
             resultSet = statement.executeQuery();
+
+            List<T> resultList = Lists.newArrayList();
+
             while (resultSet.next()) {
 
                 ResultSetMetaData metaData = resultSet.getMetaData();
                 int columnCount = metaData.getColumnCount();
 
                 Class<?> resultTypeClass = Class.forName(resultTypeClassName);
-
                 Object record = resultTypeClass.newInstance();
 
                 for (int i = 1; i <= columnCount; i++) {
@@ -60,8 +76,7 @@ public class UserDao {
                     field.setAccessible(true);
                     field.set(record, columnValue);
                 }
-
-                resultList.add(record);
+                resultList.add((T) record);
             }
             return resultList;
 
@@ -69,13 +84,7 @@ public class UserDao {
             e.printStackTrace();
             throw new RuntimeException(e.getMessage());
         } finally {
-            if (resultSet != null) {
-                try {
-                    resultSet.close();
-                } catch (SQLException e) {
-                    e.printStackTrace();
-                }
-            }
+            JdbcUtils.release(connection, statement, resultSet);
         }
     }
 }
