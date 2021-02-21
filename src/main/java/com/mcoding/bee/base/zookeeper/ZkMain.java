@@ -21,7 +21,7 @@ public class ZkMain {
         // 1.Connect to zk
         CuratorFramework client = CuratorFrameworkFactory.newClient(
                 ZK_ADDRESS,
-                new RetryNTimes(10, 5000)
+                new RetryNTimes(3, 1000)
         );
         client.start();
         System.out.println("zk client start successfully!");
@@ -29,6 +29,8 @@ public class ZkMain {
         Thread t1 = new Thread(() -> {
             doWithLock(client);
         }, "t1");
+
+
         Thread t2 = new Thread(() -> {
             doWithLock(client);
         }, "t2");
@@ -40,9 +42,9 @@ public class ZkMain {
     private static void doWithLock(CuratorFramework client) {
         InterProcessMutex lock = new InterProcessMutex(client, ZK_LOCK_PATH);
         try {
-            if (lock.acquire(20, TimeUnit.SECONDS)) {
+            if (lock.acquire(60, TimeUnit.SECONDS)) {
                 System.out.println(Thread.currentThread().getName() + " hold lock");
-                TimeUnit.SECONDS.sleep(60);
+                TimeUnit.SECONDS.sleep(30);
                 System.out.println(Thread.currentThread().getName() + " release lock");
             }
         } catch (Exception e) {
